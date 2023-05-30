@@ -74,6 +74,8 @@ func (ms *MemoryStore) GetAll() []Product {
 	return maps.Values(ms.Products)
 }
 
+// GetProduct takes id and returns the corresponding product.
+// It errors if the product with requested ID does not exist.
 func (ms *MemoryStore) GetProduct(id string) (Product, error) {
 	ms.mx.RLock()
 	defer ms.mx.RUnlock()
@@ -84,29 +86,28 @@ func (ms *MemoryStore) GetProduct(id string) (Product, error) {
 	return p, nil
 }
 
+// Store is an interface for product store.
 type Store interface {
 	GetAll() []Product
 	GetProduct(id string) (Product, error)
 }
 
-func getEnv(key, fallback string) string {
+func latencyFromEnv(key, fallback string) time.Duration {
 	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func delayFromEnv(key string, fallback time.Duration) time.Duration {
-	if value, ok := os.LookupEnv(key); ok {
-		v, err := strconv.Atoi(value)
+		v, err := time.ParseDuration(value)
 		if err != nil {
 			panic(err)
 		}
-		return time.Duration(v) * time.Millisecond
+		return v
 	}
-	return fallback
+	value, err := time.ParseDuration(fallback)
+	if err != nil {
+		panic(err)
+	}
+	return value
 }
 
+// Server holds data for CoffeeShop server.
 type Server struct {
 	HTTPServer *http.Server
 	URL        string
@@ -114,14 +115,22 @@ type Server struct {
 	Store      Store
 }
 
-type option func(*Server)
+type option func(*Server) error
 
-func WithLatency(d time.Duration) option {
-	return func(s *Server) {
-		s.Latency = d
+// WithLatency halps to configure custom latency for
+// all routes implemented in CoffeeShop server.
+func WithLatency(latency string) option {
+	return func(s *Server) error {
+		v, err := time.ParseDuration(latency)
+		if err != nil {
+			return err
+		}
+		s.Latency = v
+		return nil
 	}
 }
 
+// New creates a new coffeeshop server.
 func New(addr string, store Store, options ...option) *Server {
 	srv := Server{
 		HTTPServer: &http.Server{
@@ -130,7 +139,7 @@ func New(addr string, store Store, options ...option) *Server {
 			WriteTimeout: 30 * time.Second,
 		},
 		URL:     fmt.Sprintf("http://%s/", addr),
-		Latency: delayFromEnv("COFFEESHOP_DELAY", 5*time.Millisecond),
+		Latency: latencyFromEnv("COFFEESHOP_LATENCY", "100ms"),
 		Store:   store,
 	}
 
@@ -141,6 +150,8 @@ func New(addr string, store Store, options ...option) *Server {
 	return &srv
 }
 
+// Delay is a middleware to imtroduce response latency
+// on all routes implemented by CoffeeShop server.
 func Delay(d time.Duration) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -151,6 +162,7 @@ func Delay(d time.Duration) func(next http.Handler) http.Handler {
 	}
 }
 
+// ListenAndServe starts CoffeeShop server.
 func (cs *Server) ListenAndServe() error {
 	mux := chi.NewRouter()
 	mux.Use(
@@ -164,10 +176,12 @@ func (cs *Server) ListenAndServe() error {
 	return cs.HTTPServer.ListenAndServe()
 }
 
+// Shutdown terminates CoffeeShop server.
 func (cs *Server) Shutdown(ctx context.Context) error {
 	return cs.HTTPServer.Shutdown(ctx)
 }
 
+// GetProducts returns all products available in the coffeeshop store.
 func (cs *Server) GetProducts(w http.ResponseWriter, r *http.Request) {
 	products := cs.Store.GetAll()
 	data, err := json.MarshalIndent(products, "", "  ")
@@ -180,6 +194,8 @@ func (cs *Server) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetProduct returns a single product from the coffeeshop store.
+// It errors if the product with given ID can't be found.
 func (cs *Server) GetProduct(w http.ResponseWriter, r *http.Request) {
 	productID := chi.URLParam(r, "productID")
 	product, err := cs.Store.GetProduct(productID)
@@ -198,15 +214,18 @@ func (cs *Server) GetProduct(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Run creates and starts coffeeshop server with default, in-memory store.
 func Run() error {
 	store := MemoryStore{
 		Products: inventory,
 	}
-	addr := fmt.Sprintf(":%s", strconv.Itoa(8080))
-	server := New(addr, &store, WithLatency(2*time.Second))
+	addr := fmt.Sprintf(":%s", strconv.Itoa(8088))
+	server := New(addr, &store)
 	return server.ListenAndServe()
 }
 
+// Inventory represents initial item stored in the inmemory store
+// used by the CoffeeShop server.
 var inventory = map[string]Product{
 	"1": {
 		ID:       "1",

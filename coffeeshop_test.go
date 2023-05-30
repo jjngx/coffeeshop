@@ -47,7 +47,7 @@ func newCoffeShopTestServer(store coffeeshop.Store, t *testing.T) *coffeeshop.Se
 	return cs
 }
 
-func newCoffeShopTestServerWithLatency(store coffeeshop.Store, latency time.Duration, t *testing.T) *coffeeshop.Server {
+func newCoffeShopTestServerWithLatency(store coffeeshop.Store, latency string, t *testing.T) *coffeeshop.Server {
 	t.Helper()
 
 	l, err := net.Listen("tcp", ":0")
@@ -242,7 +242,7 @@ func TestServer_ReturnsSingleProductAfterConfiguredDelay(t *testing.T) {
 		Products: inventory,
 	}
 
-	shop := newCoffeShopTestServerWithLatency(store, 2*time.Second, t)
+	shop := newCoffeShopTestServerWithLatency(store, "2s", t)
 
 	start := time.Now()
 	resp, err := http.Get(shop.URL + "products/2")
