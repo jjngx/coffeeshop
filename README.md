@@ -1,6 +1,7 @@
 [![Go](https://github.com/jjngx/coffeeshop/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/jjngx/coffeeshop/actions/workflows/go.yml)
 ![GitHub](https://img.shields.io/github/license/jjngx/coffeeshop)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jjngx/coffeeshop)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jjngx/coffeeshop)](https://goreportcard.com/report/github.com/jjngx/coffeeshop)
 
 
 # coffeeshop

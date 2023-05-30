@@ -1,5 +1,6 @@
 .PHONY: dox test vet check cover tidy
 
+
 help: ## Show help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -27,4 +28,4 @@ tidy: ## Run go mod tidy
 # Development targets
 
 run: ## Start web service for testing
-	go run ./cmd/coffeeshop-api/main.go
+	COFFEESHOP_LATENCY=3s go run ./cmd/coffeeshop-api/main.go
