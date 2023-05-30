@@ -1,4 +1,3 @@
-![GitHub](https://img.shields.io/github/license/jjngx/coffeeshop)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jjngx/coffeeshop)
 
 
